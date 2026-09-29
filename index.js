@@ -8,10 +8,14 @@ const ejse                              = require('ejs-electron')
 const fs                                = require('fs')
 const isDev                             = require('./app/assets/js/isdev')
 const path                              = require('path')
+const { preserveExistingUserDataPath } = require('./app/assets/js/userdatapath')
 const semver                            = require('semver')
 const { pathToFileURL }                 = require('url')
 const { AZURE_CLIENT_ID, MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR, SHELL_OPCODE } = require('./app/assets/js/ipcconstants')
 const LangLoader                        = require('./app/assets/js/langloader')
+
+// Keep the existing settings and Microsoft login folder after changing the product name.
+preserveExistingUserDataPath(app)
 
 // Setup Lang
 LangLoader.setupLanguage()
