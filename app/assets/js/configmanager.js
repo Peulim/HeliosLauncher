@@ -383,6 +383,20 @@ exports.updateMicrosoftAuthAccount = function(uuid, accessToken, msAccessToken, 
  * 
  * @returns {Object} The authenticated account object created by this action.
  */
+exports.addOfflineAuthAccount = function(uuid, name) {
+    config.selectedAccount = uuid
+
+    config.authenticationDatabase[uuid] = {
+        type: 'offline',
+        accessToken: '0',
+        username: name.trim(),
+        uuid: uuid.trim(),
+        displayName: name.trim()
+    }
+
+    return config.authenticationDatabase[uuid]
+}
+
 exports.addMicrosoftAuthAccount = function(uuid, accessToken, name, mcExpires, msAccessToken, msRefreshToken, msExpires) {
     config.selectedAccount = uuid
     config.authenticationDatabase[uuid] = {

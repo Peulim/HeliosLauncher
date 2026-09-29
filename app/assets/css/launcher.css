@@ -3966,3 +3966,24 @@ input:checked + .toggleSwitchSlider:before {
 .rotating {
     animation: rotating 10s linear infinite;
 }
+/* Embedded offline login. */
+#offlineLoginForm:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 300px;
+    margin: 16px auto 0;
+}
+#offlineUsername {
+    box-sizing: border-box;
+    padding: 10px;
+    color: white;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    font-size: 16px;
+}
+#offlineUsername:focus { outline: 2px solid #fff; }
+#offlineLoginHint, #offlineLoginError { font-size: 12px; line-height: 1.4; }
+#offlineLoginError { color: #ffb4b4; min-height: 17px; }
+#offlineLoginButton { justify-content: center; }

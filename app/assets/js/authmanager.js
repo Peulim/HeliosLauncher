@@ -416,10 +416,24 @@ async function validateSelectedMicrosoftAccount(){
 exports.validateSelected = async function(){
     const current = ConfigManager.getSelectedAccount()
 
-    if(current.type === 'microsoft') {
+    if(current.type === 'offline') {
+        return true
+    } else if(current.type === 'microsoft') {
         return await validateSelectedMicrosoftAccount()
     } else {
         return await validateSelectedMojangAccount()
     }
-    
+}
+// Offline accounts never contact Microsoft or Mojang authentication services.
+exports.addOfflineAccount = function(name){
+    const uuid = require('./offlineauth').uuidForName(name)
+    const account = ConfigManager.addOfflineAuthAccount(uuid, name)
+    ConfigManager.save()
+    return account
+}
+
+exports.removeOfflineAccount = async function(uuid){
+    if(ConfigManager.getAuthAccount(uuid)?.type !== 'offline') throw new Error('Not an offline account')
+    ConfigManager.removeAuthAccount(uuid)
+    ConfigManager.save()
 }
