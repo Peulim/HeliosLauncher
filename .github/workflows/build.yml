@@ -58,6 +58,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+
       - name: Download all installers
         uses: actions/download-artifact@v4
         with:
