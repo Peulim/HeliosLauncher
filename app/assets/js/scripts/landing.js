@@ -30,6 +30,7 @@ const {
 // Internal Requirements
 const DiscordWrapper          = require('./assets/js/discordwrapper')
 const ProcessBuilder          = require('./assets/js/processbuilder')
+const ClientPreferences       = require('./assets/js/clientpreferences')
 
 // Launch Elements
 const launch_content          = document.getElementById('launch_content')
@@ -518,6 +519,7 @@ async function dlAsync(login = true) {
         loggerLaunchSuite.info('Downloading files.')
         setLaunchDetails(Lang.queryJS('landing.dlAsync.downloadingFiles'))
         setLaunchPercentage(0)
+        const playerPreferences = ClientPreferences.capture(path.join(ConfigManager.getInstanceDirectory(), serv.rawServer.id))
         try {
             await fullRepairModule.download(percent => {
                 setDownloadPercentage(percent)
@@ -527,6 +529,8 @@ async function dlAsync(login = true) {
             loggerLaunchSuite.error('Error during file download.')
             showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringFileDownloadTitle'), err.displayable || Lang.queryJS('landing.dlAsync.seeConsoleForDetails'))
             return
+        } finally {
+            ClientPreferences.restore(path.join(ConfigManager.getInstanceDirectory(), serv.rawServer.id), playerPreferences)
         }
     } else {
         loggerLaunchSuite.info('No invalid files, skipping download.')

@@ -1,7 +1,7 @@
 {
   "name": "helioslauncher",
-  "version": "2.2.2",
-  "productName": "Helios Launcher",
+  "version": "2.2.3",
+  "productName": "Launcher Cobbleverse",
   "description": "Modded Minecraft Launcher",
   "author": "Daniel Scalzi (https://github.com/dscalzi/)",
   "license": "MIT",
@@ -17,7 +17,8 @@
     "dist:win": "npm run dist -- -w",
     "dist:mac": "npm run dist -- -m",
     "dist:linux": "npm run dist -- -l",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --test"
   },
   "engines": {
     "node": "22.x.x"
