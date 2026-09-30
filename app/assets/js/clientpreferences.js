@@ -15,6 +15,8 @@ const PLAYER_PREFERENCE_PATHS = [
 
 const LEGACY_GRASS_PACK = 'Cobblemon Classic Grass Pack v1.0 MC1.21.1.zip'
 const PUNCHY_PACK = '[Chilli´s] punchy! cobblemon.zip'
+const XAERO_PREVIOUS_SERVER_HOST = 'enx-cirion-128.enx.host'
+const XAERO_CURRENT_SERVER_HOST = 'enx-soc-12.enx.host'
 
 exports.migrateResourcePacks = function(instanceDirectory) {
     const optionsPath = path.join(instanceDirectory, 'options.txt')
@@ -51,6 +53,78 @@ exports.migrateResourcePacks = function(instanceDirectory) {
     const legacyPackPath = path.join(instanceDirectory, 'resourcepacks', LEGACY_GRASS_PACK)
     if (fs.existsSync(legacyPackPath) && fs.statSync(legacyPackPath).isFile()) {
         fs.removeSync(legacyPackPath)
+    }
+}
+
+function copyMissingXaeroFiles(sourceDirectory, targetDirectory) {
+    if (!fs.existsSync(sourceDirectory)) {
+        return
+    }
+    fs.ensureDirSync(targetDirectory)
+    for (const entry of fs.readdirSync(sourceDirectory, { withFileTypes: true })) {
+        if (entry.name === 'cache' || entry.name === '.lock' || entry.name.endsWith('.temp')) {
+            continue
+        }
+        const sourcePath = path.join(sourceDirectory, entry.name)
+        const targetPath = path.join(targetDirectory, entry.name)
+        if (entry.isDirectory()) {
+            copyMissingXaeroFiles(sourcePath, targetPath)
+        } else if (entry.isFile() && !fs.existsSync(targetPath)) {
+            fs.copyFileSync(sourcePath, targetPath)
+        }
+    }
+}
+
+function hasXaeroLock(directory) {
+    if (!fs.existsSync(directory)) {
+        return false
+    }
+    return fs.readdirSync(directory, { withFileTypes: true }).some(entry => {
+        if (entry.name === '.lock') {
+            return true
+        }
+        return entry.isDirectory() && hasXaeroLock(path.join(directory, entry.name))
+    })
+}
+
+exports.migrateXaeroMaps = function(instanceDirectory, serverAddress) {
+    let currentHost
+    try {
+        currentHost = new URL(`tcp://${serverAddress}`).hostname.toLowerCase()
+    } catch (_) {
+        return
+    }
+    if (currentHost !== XAERO_CURRENT_SERVER_HOST) {
+        return
+    }
+
+    const xaeroDirectory = path.join(instanceDirectory, 'xaero')
+    const migrationMarker = path.join(xaeroDirectory, '.launcher-map-migration-v1')
+    if (fs.existsSync(migrationMarker)) {
+        return
+    }
+
+    const mapDirectories = []
+    for (const mapType of ['world-map', 'minimap']) {
+        const mapDirectory = path.join(xaeroDirectory, mapType)
+        const sourceDirectory = path.join(mapDirectory, `Multiplayer_${XAERO_PREVIOUS_SERVER_HOST}`)
+        const targetDirectory = path.join(mapDirectory, `Multiplayer_${XAERO_CURRENT_SERVER_HOST}`)
+        if (fs.existsSync(sourceDirectory)) {
+            // Do not touch map files while Xaero is writing them in the running game.
+            if (hasXaeroLock(sourceDirectory) || hasXaeroLock(targetDirectory)) {
+                return
+            }
+            mapDirectories.push({ sourceDirectory, targetDirectory })
+        }
+    }
+
+    for (const { sourceDirectory, targetDirectory } of mapDirectories) {
+        copyMissingXaeroFiles(sourceDirectory, targetDirectory)
+    }
+
+    if (mapDirectories.length > 0) {
+        fs.ensureDirSync(xaeroDirectory)
+        fs.writeFileSync(migrationMarker, `${XAERO_PREVIOUS_SERVER_HOST} -> ${XAERO_CURRENT_SERVER_HOST}\n`)
     }
 }
 
