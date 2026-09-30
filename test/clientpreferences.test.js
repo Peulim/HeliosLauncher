@@ -37,7 +37,7 @@ test('preserves existing player controls and visual preferences through a pack u
     }
     const restoredOptions = fs.readFileSync(path.join(instanceDir, 'options.txt'), 'utf8')
     assert.match(restoredOptions, /^key_key\.forward:key\.keyboard\.i$/m)
-    assert.match(restoredOptions, /^resourcePacks:\["vanilla","punchy:punchy","file\/\[Chilli´s\] punchy! cobblemon\.zip"\]$/m)
+    assert.match(restoredOptions, /^resourcePacks:\["vanilla","file\/Stay_True_1\.21\.zip","punchy:punchy","file\/\[Chilli´s\] punchy! cobblemon\.zip"\]$/m)
     assert.equal(fs.readFileSync(path.join(instanceDir, 'config/server-rules.toml'), 'utf8'), 'server-updated rules')
 })
 
@@ -63,7 +63,7 @@ test('activates Punchy packs and removes the old grass pack without resetting ot
     const migrated = fs.readFileSync(path.join(instanceDir, 'options.txt'), 'utf8')
     assert.match(migrated, /^key_key\.forward:key\.keyboard\.i$/m)
     assert.match(migrated, /^soundCategory_music:0\.5$/m)
-    assert.match(migrated, /^resourcePacks:\["vanilla","punchy:punchy","file\/\[Chilli´s\] punchy! cobblemon\.zip"\]$/m)
+    assert.match(migrated, /^resourcePacks:\["vanilla","file\/Stay_True_1\.21\.zip","punchy:punchy","file\/\[Chilli´s\] punchy! cobblemon\.zip"\]$/m)
     assert.equal(fs.existsSync(path.join(resourcePacksDir, 'Cobblemon Classic Grass Pack v1.0 MC1.21.1.zip')), false)
 })
 
@@ -87,7 +87,7 @@ test('migrates existing resource pack selections even when no download repair is
 
     const options = fs.readFileSync(path.join(instanceDir, 'options.txt'), 'utf8')
     assert.match(options, /^key_key\.jump:key\.keyboard\.space$/m)
-    assert.match(options, /^resourcePacks:\["punchy:punchy","file\/\[Chilli´s\] punchy! cobblemon\.zip"\]$/m)
+    assert.match(options, /^resourcePacks:\["file\/Stay_True_1\.21\.zip","punchy:punchy","file\/\[Chilli´s\] punchy! cobblemon\.zip"\]$/m)
 })
 
 test('merges Xaero maps from the previous Cobbleverse server address without overwriting newer map data', t => {

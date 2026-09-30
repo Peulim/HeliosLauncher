@@ -14,6 +14,7 @@ const PLAYER_PREFERENCE_PATHS = [
 ]
 
 const LEGACY_GRASS_PACK = 'Cobblemon Classic Grass Pack v1.0 MC1.21.1.zip'
+const STAY_TRUE_PACK = 'Stay_True_1.21.zip'
 const PUNCHY_PACK = '[Chilli´s] punchy! cobblemon.zip'
 const XAERO_PREVIOUS_SERVER_HOST = 'enx-cirion-128.enx.host'
 const XAERO_CURRENT_SERVER_HOST = 'enx-soc-12.enx.host'
@@ -34,16 +35,18 @@ exports.migrateResourcePacks = function(instanceDirectory) {
             if (!Array.isArray(packs)) {
                 return line
             }
-            packs = packs.filter(pack => pack !== `file/${LEGACY_GRASS_PACK}`)
+            packs = packs.filter(pack => pack !== `file/${LEGACY_GRASS_PACK}` && pack !== `file/${STAY_TRUE_PACK}`)
             for (const pack of ['punchy:punchy', `file/${PUNCHY_PACK}`]) {
                 if (!packs.includes(pack)) {
                     packs.push(pack)
                 }
             }
+            const punchyIndex = packs.findIndex(pack => pack === 'punchy:punchy' || pack === `file/${PUNCHY_PACK}`)
+            packs.splice(punchyIndex, 0, `file/${STAY_TRUE_PACK}`)
             return prefix + JSON.stringify(packs)
         })
         if (!foundResourcePacks) {
-            migrated += `${migrated.length > 0 && !migrated.endsWith('\n') ? '\n' : ''}resourcePacks:["punchy:punchy","file/${PUNCHY_PACK}"]\n`
+            migrated += `${migrated.length > 0 && !migrated.endsWith('\n') ? '\n' : ''}resourcePacks:["file/${STAY_TRUE_PACK}","punchy:punchy","file/${PUNCHY_PACK}"]\n`
         }
         if (migrated !== options) {
             fs.writeFileSync(optionsPath, migrated)
