@@ -3,6 +3,7 @@ const crypto = require('crypto')
 const got = require('got')
 
 const ConfigManager = require('./configmanager')
+const ClientPreferences = require('./clientpreferences')
 
 // Old WesterosCraft url.
 // exports.REMOTE_DISTRO_URL = 'http://mc.westeroscraft.com/WesterosCraftLauncher/distribution.json'
@@ -93,7 +94,10 @@ api.pullRemote = async function() {
     try {
         const response = await got.get(exports.REMOTE_DISTRO_URL)
         return {
-            data: await includeFabricLibraries(JSON.parse(response.body.replace(/^\uFEFF/, ''))),
+            data: await includeFabricLibraries(ClientPreferences.protectDistributionPreferences(
+                JSON.parse(response.body.replace(/^\uFEFF/, '')),
+                ConfigManager.getInstanceDirectory()
+            )),
             responseStatus: RestResponseStatus.SUCCESS
         }
     } catch (error) {

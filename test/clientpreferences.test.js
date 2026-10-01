@@ -4,14 +4,75 @@ const os = require('node:os')
 const path = require('node:path')
 const test = require('node:test')
 
-const { capture, migrateXaeroMaps, restore } = require('../app/assets/js/clientpreferences')
+const { capture, migrateXaeroMaps, restore, protectDistributionPreferences } = require('../app/assets/js/clientpreferences')
+
+test('updates install missing defaults but do not queue existing music and shader preferences for replacement', t => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cobbleverse-update-'))
+    t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+    const instance = path.join(root, 'pack')
+    const files = {
+        'options.txt': 'soundCategory_music:0.0\n',
+        'config/iris.properties': 'shaderPack=Custom.zip\n',
+        'shaderpacks/Custom.zip.txt': 'BLOOM=false\n',
+        'defaultoptions.journal.json': '{"options":true}\n'
+    }
+    for (const [file, contents] of Object.entries(files)) {
+        fs.mkdirSync(path.dirname(path.join(instance, file)), { recursive: true })
+        fs.writeFileSync(path.join(instance, file), contents)
+    }
+    const paths = [...Object.keys(files), 'config/oculus.properties', 'shaderpacks/New.zip.txt', 'shaderpacks/Custom.zip', 'shaderpacks/Custom/shaders/lang/en_us.lang', 'config/cobblemon/main.json']
+    const moduleFor = file => ({ type: 'File', artifact: { path: file } })
+    const distribution = { servers: [{ id: 'pack', modules: paths.map(moduleFor) }, { id: 'new-pack', modules: paths.map(moduleFor) }] }
+    protectDistributionPreferences(distribution, root)
+    assert.deepEqual(distribution.servers[0].modules.map(m => m.artifact.path), paths.slice(Object.keys(files).length))
+    assert.deepEqual(distribution.servers[1].modules.map(m => m.artifact.path), paths)
+    for (const [file, contents] of Object.entries(files)) {
+        assert.equal(fs.readFileSync(path.join(instance, file), 'utf8'), contents)
+    }
+})
+
+test('preserves shader selection and per-pack settings when an update replaces or deletes them', t => {
+    const instanceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cobbleverse-instance-'))
+    t.after(() => fs.rmSync(instanceDir, { recursive: true, force: true }))
+    const preferences = {
+        'config/iris.properties': 'enableShaders=true\nshaderPack=Complementary.zip\n',
+        'config/oculus.properties': 'enableShaders=false\n',
+        'optionsshaders.txt': 'shaderPack=Custom.zip\n',
+        'shaderpacks/Complementary.zip.txt': 'SHADOW_DISTANCE=64\nBLOOM=false\n',
+        'shaderpacks/My custom shader.txt': 'QUALITY=LOW\n'
+    }
+    for (const [relativePath, contents] of Object.entries(preferences)) {
+        const target = path.join(instanceDir, relativePath)
+        fs.mkdirSync(path.dirname(target), { recursive: true })
+        fs.writeFileSync(target, contents)
+    }
+    fs.writeFileSync(path.join(instanceDir, 'shaderpacks/Complementary.zip'), 'old shader archive')
+    fs.mkdirSync(path.join(instanceDir, 'shaderpacks/directory.txt'))
+
+    const saved = capture(instanceDir)
+    for (const relativePath of Object.keys(preferences)) {
+        fs.unlinkSync(path.join(instanceDir, relativePath))
+    }
+    fs.writeFileSync(path.join(instanceDir, 'config/iris.properties'), 'pack defaults')
+    fs.writeFileSync(path.join(instanceDir, 'shaderpacks/Complementary.zip.txt'), 'SHADOW_DISTANCE=256\n')
+    fs.writeFileSync(path.join(instanceDir, 'shaderpacks/Complementary.zip'), 'updated shader archive')
+    fs.writeFileSync(path.join(instanceDir, 'shaderpacks/New.zip.txt'), 'new pack defaults')
+
+    restore(instanceDir, saved)
+
+    for (const [relativePath, contents] of Object.entries(preferences)) {
+        assert.equal(fs.readFileSync(path.join(instanceDir, relativePath), 'utf8'), contents)
+    }
+    assert.equal(fs.readFileSync(path.join(instanceDir, 'shaderpacks/Complementary.zip'), 'utf8'), 'updated shader archive')
+    assert.equal(fs.readFileSync(path.join(instanceDir, 'shaderpacks/New.zip.txt'), 'utf8'), 'new pack defaults')
+})
 
 test('preserves existing player controls and visual preferences through a pack update', t => {
     const instanceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cobbleverse-instance-'))
     t.after(() => fs.rmSync(instanceDir, { recursive: true, force: true }))
 
     const preferences = {
-        'options.txt': 'key_key.forward:key.keyboard.i\nresourcePacks:["vanilla"]\n',
+        'options.txt': 'key_key.forward:key.keyboard.i\nsoundCategory_music:0.0\nsoundCategory_master:0.35\nresourcePacks:["vanilla"]\n',
         'config/sodium-options.json': '{"quality":{"clouds":"fast"}}\n',
         'config/fzzy_config/keybinds.toml': '[keybinds]\nexample = "key.keyboard.k"\n'
     }
@@ -37,6 +98,8 @@ test('preserves existing player controls and visual preferences through a pack u
     }
     const restoredOptions = fs.readFileSync(path.join(instanceDir, 'options.txt'), 'utf8')
     assert.match(restoredOptions, /^key_key\.forward:key\.keyboard\.i$/m)
+    assert.match(restoredOptions, /^soundCategory_music:0\.0$/m)
+    assert.match(restoredOptions, /^soundCategory_master:0\.35$/m)
     assert.match(restoredOptions, /^resourcePacks:\["vanilla","file\/Stay_True_1\.21\.zip","punchy:punchy","file\/\[Chilli´s\] punchy! cobblemon\.zip"\]$/m)
     assert.equal(fs.readFileSync(path.join(instanceDir, 'config/server-rules.toml'), 'utf8'), 'server-updated rules')
 })
@@ -73,9 +136,15 @@ test('leaves new player preference defaults in place when no prior file exists',
 
     const savedPreferences = capture(instanceDir)
     fs.writeFileSync(path.join(instanceDir, 'options.txt'), 'new player defaults')
+    fs.mkdirSync(path.join(instanceDir, 'config'))
+    fs.mkdirSync(path.join(instanceDir, 'shaderpacks'))
+    fs.writeFileSync(path.join(instanceDir, 'config/iris.properties'), 'enableShaders=true\n')
+    fs.writeFileSync(path.join(instanceDir, 'shaderpacks/New.zip.txt'), 'QUALITY=HIGH\n')
     restore(instanceDir, savedPreferences)
 
     assert.equal(fs.readFileSync(path.join(instanceDir, 'options.txt'), 'utf8'), 'new player defaults')
+    assert.equal(fs.readFileSync(path.join(instanceDir, 'config/iris.properties'), 'utf8'), 'enableShaders=true\n')
+    assert.equal(fs.readFileSync(path.join(instanceDir, 'shaderpacks/New.zip.txt'), 'utf8'), 'QUALITY=HIGH\n')
 })
 
 test('migrates existing resource pack selections even when no download repair is needed', t => {

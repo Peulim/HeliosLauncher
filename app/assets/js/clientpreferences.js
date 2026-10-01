@@ -6,6 +6,9 @@ const PLAYER_PREFERENCE_PATHS = [
     'options.txt',
     'optionsshaders.txt',
     'optionsof.txt',
+    'defaultoptions.journal.json',
+    'config/iris.properties',
+    'config/oculus.properties',
     'config/sodium-options.json',
     'config/reeses_sodium_options.json',
     'config/fzzy_config/keybinds.toml',
@@ -18,6 +21,30 @@ const STAY_TRUE_PACK = 'Stay_True_1.21.zip'
 const PUNCHY_PACK = '[Chilli´s] punchy! cobblemon.zip'
 const XAERO_PREVIOUS_SERVER_HOST = 'enx-cirion-128.enx.host'
 const XAERO_CURRENT_SERVER_HOST = 'enx-soc-12.enx.host'
+
+exports.protectDistributionPreferences = function(distribution, instancesDirectory) {
+    for (const server of distribution.servers) {
+        const filterModules = modules => modules.filter(module => {
+            const relativePath = module.artifact?.path?.replace(/\\/g, '/')
+            const isPreference = PLAYER_PREFERENCE_PATHS.includes(relativePath)
+                || /^shaderpacks\/[^/]+\.txt$/.test(relativePath || '')
+            if (module.type === 'File' && isPreference) {
+                const absolutePath = path.join(instancesDirectory, server.id, relativePath)
+                if (fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()) {
+                    return false
+                }
+            }
+            if (module.subModules) {
+                module.subModules = filterModules(module.subModules)
+            }
+            return true
+        })
+        // Existing player preferences are not pack artifacts. Missing files still
+        // download normally so first-time players receive the packaged defaults.
+        server.modules = filterModules(server.modules)
+    }
+    return distribution
+}
 
 exports.migrateResourcePacks = function(instanceDirectory) {
     const optionsPath = path.join(instanceDirectory, 'options.txt')
@@ -133,7 +160,18 @@ exports.migrateXaeroMaps = function(instanceDirectory, serverAddress) {
 
 exports.capture = function(instanceDirectory) {
     const saved = new Map()
-    for (const relativePath of PLAYER_PREFERENCE_PATHS) {
+    const preferencePaths = [...PLAYER_PREFERENCE_PATHS]
+    // Iris/OptiFine store each pack's user settings beside the shader archive.
+    // Preserve settings only, so shader archives still receive pack updates.
+    const shaderDirectory = path.join(instanceDirectory, 'shaderpacks')
+    if (fs.existsSync(shaderDirectory) && fs.statSync(shaderDirectory).isDirectory()) {
+        for (const entry of fs.readdirSync(shaderDirectory, { withFileTypes: true })) {
+            if (entry.isFile() && entry.name.endsWith('.txt')) {
+                preferencePaths.push(path.join('shaderpacks', entry.name))
+            }
+        }
+    }
+    for (const relativePath of preferencePaths) {
         const absolutePath = path.join(instanceDirectory, relativePath)
         if (fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()) {
             saved.set(relativePath, fs.readFileSync(absolutePath))
