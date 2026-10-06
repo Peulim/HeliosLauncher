@@ -22,6 +22,16 @@ const PUNCHY_PACK = '[Chilli´s] punchy! cobblemon.zip'
 const XAERO_PREVIOUS_SERVER_HOST = 'enx-cirion-128.enx.host'
 const XAERO_CURRENT_SERVER_HOST = 'enx-soc-12.enx.host'
 
+exports.disableIncompatiblePackMods = function(instanceDirectory) {
+    for (const name of ['fancymenu_fabric_3.9.8_MC_1.21.1.jar', 'fancymenu_fabric_3.8.1_MC_1.21.1.jar', 'c2me-fabric-mc1.21.1-0.4.0-alpha.0.23.jar', 'watermedia-3.0.0.23.jar']) {
+        const source = path.join(instanceDirectory, 'mods', name)
+        if (!fs.existsSync(source)) continue
+        let target = `${source}.disabled`
+        for (let index = 1; fs.existsSync(target); index++) target = `${source}.${index}.disabled`
+        fs.renameSync(source, target)
+    }
+}
+
 exports.protectDistributionPreferences = function(distribution, instancesDirectory) {
     for (const server of distribution.servers) {
         const filterModules = modules => modules.filter(module => {

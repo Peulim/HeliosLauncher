@@ -6,6 +6,24 @@ const test = require('node:test')
 
 const { capture, migrateXaeroMaps, restore, protectDistributionPreferences } = require('../app/assets/js/clientpreferences')
 
+test('disables obsolete incompatible mods without touching current mods or player additions', t => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cobbleverse-mod-migration-'))
+    t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+    const mods = path.join(root, 'mods')
+    fs.mkdirSync(mods)
+    const obsolete = ['fancymenu_fabric_3.9.8_MC_1.21.1.jar', 'c2me-fabric-mc1.21.1-0.4.0-alpha.0.23.jar']
+    const keep = ['fancymenu_fabric_3.9.1_MC_1.21.1.jar', 'watermedia-2.1.37.jar', 'personal.jar']
+    for (const file of [...obsolete, ...keep]) fs.writeFileSync(path.join(mods, file), file)
+    const { disableIncompatiblePackMods } = require('../app/assets/js/clientpreferences')
+    disableIncompatiblePackMods(root)
+    disableIncompatiblePackMods(root)
+    for (const file of obsolete) {
+        assert.equal(fs.existsSync(path.join(mods, file)), false)
+        assert.equal(fs.readFileSync(path.join(mods, file + '.disabled'), 'utf8'), file)
+    }
+    for (const file of keep) assert.equal(fs.readFileSync(path.join(mods, file), 'utf8'), file)
+})
+
 test('updates install missing defaults but do not queue existing music and shader preferences for replacement', t => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cobbleverse-update-'))
     t.after(() => fs.rmSync(root, { recursive: true, force: true }))

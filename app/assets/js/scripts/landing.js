@@ -537,6 +537,7 @@ async function dlAsync(login = true) {
     }
 
     // Apply the pack migration even when the distribution files are already current.
+    ClientPreferences.disableIncompatiblePackMods(path.join(ConfigManager.getInstanceDirectory(), serv.rawServer.id))
     ClientPreferences.migrateResourcePacks(path.join(ConfigManager.getInstanceDirectory(), serv.rawServer.id))
     ClientPreferences.migrateXaeroMaps(
         path.join(ConfigManager.getInstanceDirectory(), serv.rawServer.id),
