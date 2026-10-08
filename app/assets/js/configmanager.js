@@ -54,9 +54,9 @@ exports.getAbsoluteMinRAM = function(ram){
 }
 
 exports.getAbsoluteMaxRAM = function(_ram){
-    const mem = os.totalmem()
-    const gT16 = mem-(16*1073741824)
-    return Math.floor((mem-(gT16 > 0 ? (Number.parseInt(gT16/8) + (16*1073741824)/4) : mem/4))/1073741824)
+    // Keep the user's selectable ceiling fixed. The slider already warns when
+    // the selected allocation is high relative to the machine's physical RAM.
+    return 12
 }
 
 function resolveSelectedRAM(ram) {
